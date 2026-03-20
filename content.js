@@ -9,7 +9,7 @@ const MSG_KEY = '__holodexPlusData';
 
 // ── 1. Relay intercepted API responses to background ─────────────────────────
 
-window.addEventListener('message', (event) => {
+function onWindowMessage(event) {
   // Only accept messages from the same frame, not from child frames / iframes
   if (event.source !== window) return;
   if (!event.data?.[MSG_KEY]) return;
@@ -17,10 +17,24 @@ window.addEventListener('message', (event) => {
   const streams = event.data.data;
   if (!Array.isArray(streams)) return;
 
-  chrome.runtime.sendMessage({ type: 'API_DATA', streams }).catch(() => {
-    // Background may not be ready yet — silently ignore
-  });
-});
+  // If the extension context has been invalidated (e.g. after a reload),
+  // stop listening to avoid repeated uncaught errors.
+  if (!chrome.runtime?.id) {
+    window.removeEventListener('message', onWindowMessage);
+    return;
+  }
+
+  try {
+    chrome.runtime.sendMessage({ type: 'API_DATA', streams }).catch(() => {
+      // Background service worker not yet active — silently ignore
+    });
+  } catch (_) {
+    // Context invalidated between the id-check and the call — remove listener
+    window.removeEventListener('message', onWindowMessage);
+  }
+}
+
+window.addEventListener('message', onWindowMessage);
 
 // ── 2. Auto-play on watch pages ───────────────────────────────────────────────
 
