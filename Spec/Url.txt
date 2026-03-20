@@ -1,0 +1,2 @@
+網址：https://holodex.net/
+API：https://holodex.net/api/v2/live?type=placeholder%2Cstream&include=mentions&org=Hololive

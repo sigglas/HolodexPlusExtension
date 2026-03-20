@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HolodexPlus — 設定</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      max-width: 620px;
+      margin: 0 auto;
+      padding: 32px 24px 48px;
+      background: #0f0f17;
+      color: #e8e8f0;
+    }
+
+    h1 {
+      font-size: 22px;
+      font-weight: 700;
+      margin-bottom: 6px;
+      background: linear-gradient(90deg, #a78bfa, #60a5fa);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .subtitle {
+      font-size: 13px;
+      color: #6b7280;
+      margin-bottom: 32px;
+    }
+
+    .section {
+      background: #1a1a2e;
+      border-radius: 10px;
+      padding: 20px 22px;
+      margin-bottom: 20px;
+    }
+
+    .section h2 {
+      font-size: 14px;
+      font-weight: 700;
+      color: #a78bfa;
+      margin-bottom: 14px;
+    }
+
+    label {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      font-size: 14px;
+      margin-bottom: 14px;
+      cursor: pointer;
+    }
+
+    label input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+      flex-shrink: 0;
+      margin-top: 2px;
+      accent-color: #a78bfa;
+    }
+
+    label .label-text { line-height: 1.5; }
+    label .hint { font-size: 12px; color: #6b7280; }
+
+    .field-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    .field-row label {
+      margin: 0;
+      white-space: nowrap;
+      font-size: 13px;
+    }
+
+    .field-row input[type="number"] {
+      width: 80px;
+      background: #0f0f17;
+      border: 1px solid #374151;
+      border-radius: 6px;
+      color: #e8e8f0;
+      font-size: 13px;
+      padding: 5px 8px;
+      outline: none;
+    }
+
+    .field-row input[type="number"]:focus { border-color: #a78bfa; }
+
+    .channel-section input[type="text"] {
+      width: 100%;
+      background: #0f0f17;
+      border: 1px solid #374151;
+      border-radius: 6px;
+      color: #e8e8f0;
+      font-size: 13px;
+      padding: 8px 12px;
+      outline: none;
+      margin-top: 4px;
+    }
+
+    .channel-section input[type="text"]:focus { border-color: #a78bfa; }
+
+    textarea {
+      width: 100%;
+      background: #0f0f17;
+      border: 1px solid #374151;
+      border-radius: 6px;
+      color: #e8e8f0;
+      font-size: 13px;
+      padding: 8px 12px;
+      outline: none;
+      resize: vertical;
+      min-height: 120px;
+      font-family: inherit;
+      line-height: 1.7;
+    }
+
+    textarea:focus { border-color: #a78bfa; }
+
+    .hint-text {
+      font-size: 12px;
+      color: #6b7280;
+      margin-top: 6px;
+    }
+
+    .channel-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 10px;
+    }
+
+    .tag {
+      background: #2d1f5e;
+      border: 1px solid #4c1d95;
+      border-radius: 20px;
+      font-size: 12px;
+      padding: 3px 10px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .tag .remove-tag {
+      background: none;
+      border: none;
+      color: #c084fc;
+      cursor: pointer;
+      font-size: 13px;
+      padding: 0;
+      line-height: 1;
+    }
+
+    .tag .remove-tag:hover { color: #ef4444; }
+
+    .add-row {
+      display: flex;
+      gap: 8px;
+    }
+
+    .add-row input {
+      flex: 1;
+      background: #0f0f17;
+      border: 1px solid #374151;
+      border-radius: 6px;
+      color: #e8e8f0;
+      font-size: 13px;
+      padding: 7px 12px;
+      outline: none;
+    }
+
+    .add-row input:focus { border-color: #a78bfa; }
+
+    .btn {
+      background: #6d28d9;
+      border: none;
+      border-radius: 6px;
+      color: #fff;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 600;
+      padding: 7px 16px;
+      transition: background .15s;
+    }
+
+    .btn:hover { background: #7c3aed; }
+
+    .btn-save {
+      background: #065f46;
+      width: 100%;
+      padding: 12px;
+      font-size: 15px;
+      border-radius: 8px;
+      margin-top: 8px;
+    }
+
+    .btn-save:hover { background: #047857; }
+
+    #saveStatus {
+      text-align: center;
+      font-size: 13px;
+      margin-top: 10px;
+      color: #34d399;
+      min-height: 20px;
+    }
+  </style>
+</head>
+<body>
+  <h1>HolodexPlus</h1>
+  <p class="subtitle">進階設定</p>
+
+  <!-- Watched Channels -->
+  <div class="section">
+    <h2>監控頻道清單</h2>
+    <div class="channel-tags" id="channelTags"></div>
+    <div class="add-row">
+      <input type="text" id="newChannel" placeholder="頻道名稱（channel.name 或 channel.english_name）" />
+      <button class="btn" id="addChannelBtn">新增</button>
+    </div>
+    <p class="hint-text">輸入頻道名稱，例如：<code>Koseki Bijou</code> 或 <code>Koseki Bijou Ch. hololive-EN</code></p>
+  </div>
+
+  <!-- Timing -->
+  <div class="section">
+    <h2>時間設定</h2>
+    <div class="field-row">
+      <label for="preStartMin">提前開啟（分鐘）</label>
+      <input type="number" id="preStartMin" min="1" max="30" value="3" />
+      <span class="hint-text">在排程開播前幾分鐘自動開啟分頁</span>
+    </div>
+    <div class="field-row">
+      <label for="reopenMin">重開視窗時限（分鐘）</label>
+      <input type="number" id="reopenMin" min="1" max="60" value="10" />
+      <span class="hint-text">已開播後距今幾分鐘內若分頁被關閉，自動重開</span>
+    </div>
+  </div>
+
+  <!-- Behaviour -->
+  <div class="section">
+    <h2>行為設定</h2>
+    <label>
+      <input type="checkbox" id="autoplayEnabled" checked />
+      <span class="label-text">
+        開啟分頁後自動播放影片
+        <span class="hint">（嘗試點擊 YouTube 播放鍵，但部分情況下瀏覽器會封鎖自動播放）</span>
+      </span>
+    </label>
+    <label>
+      <input type="checkbox" id="activeTab" />
+      <span class="label-text">
+        在前景（Active）開啟新分頁
+        <span class="hint">（預設在背景開啟，不切換至新分頁）</span>
+      </span>
+    </label>
+    <label>
+      <input type="checkbox" id="notificationsEnabled" checked />
+      <span class="label-text">顯示桌面通知</span>
+    </label>
+  </div>
+
+  <!-- Save -->
+  <button class="btn btn-save" id="saveBtn">儲存設定</button>
+  <div id="saveStatus"></div>
+
+  <script src="options.js"></script>
+</body>
+</html>

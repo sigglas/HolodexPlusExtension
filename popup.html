@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HolodexPlus</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      width: 340px;
+      background: #0f0f17;
+      color: #e8e8f0;
+      padding: 16px;
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    header img { width: 32px; height: 32px; border-radius: 6px; }
+
+    header h1 {
+      font-size: 17px;
+      font-weight: 700;
+      background: linear-gradient(90deg, #a78bfa, #60a5fa);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .status-bar {
+      font-size: 11px;
+      color: #6b7280;
+      margin-bottom: 14px;
+    }
+
+    .status-bar span { color: #a78bfa; }
+
+    section { margin-bottom: 16px; }
+
+    section h2 {
+      font-size: 12px;
+      font-weight: 600;
+      color: #9ca3af;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+      margin-bottom: 8px;
+    }
+
+    .channel-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      max-height: 160px;
+      overflow-y: auto;
+    }
+
+    .channel-list li {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: #1a1a2e;
+      border-radius: 6px;
+      padding: 6px 10px;
+      font-size: 13px;
+    }
+
+    .channel-list li .remove-btn {
+      background: none;
+      border: none;
+      color: #ef4444;
+      cursor: pointer;
+      font-size: 14px;
+      line-height: 1;
+      padding: 0 2px;
+    }
+
+    .channel-list li .remove-btn:hover { color: #fca5a5; }
+
+    .add-row {
+      display: flex;
+      gap: 6px;
+      margin-top: 8px;
+    }
+
+    .add-row input {
+      flex: 1;
+      background: #1a1a2e;
+      border: 1px solid #374151;
+      border-radius: 6px;
+      color: #e8e8f0;
+      font-size: 13px;
+      padding: 6px 10px;
+      outline: none;
+    }
+
+    .add-row input:focus { border-color: #a78bfa; }
+
+    .add-row button, .btn {
+      background: #6d28d9;
+      border: none;
+      border-radius: 6px;
+      color: #fff;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 600;
+      padding: 6px 14px;
+      transition: background .15s;
+    }
+
+    .add-row button:hover, .btn:hover { background: #7c3aed; }
+
+    .btn-row {
+      display: flex;
+      gap: 8px;
+      margin-top: 4px;
+    }
+
+    .btn-secondary {
+      background: #1f2937;
+      color: #d1d5db;
+    }
+
+    .btn-secondary:hover { background: #374151; }
+
+    .btn-danger {
+      background: #7f1d1d;
+      color: #fca5a5;
+    }
+
+    .btn-danger:hover { background: #991b1b; }
+
+    .empty-hint {
+      font-size: 12px;
+      color: #6b7280;
+      font-style: italic;
+    }
+
+    a.options-link {
+      display: block;
+      text-align: right;
+      font-size: 11px;
+      color: #6b7280;
+      text-decoration: none;
+      margin-top: 4px;
+    }
+
+    a.options-link:hover { color: #a78bfa; }
+  </style>
+</head>
+<body>
+  <header>
+    <img src="icons/icon48.png" alt="logo" />
+    <h1>HolodexPlus</h1>
+  </header>
+
+  <div class="status-bar">
+    上次接收資料：<span id="lastCheck">—</span>
+  </div>
+
+  <section>
+    <h2>已監控頻道</h2>
+    <ul class="channel-list" id="channelList">
+      <li class="empty-hint" id="emptyHint">尚未新增任何頻道</li>
+    </ul>
+    <div class="add-row">
+      <input type="text" id="newChannel" placeholder="頻道名稱 (name 或 english_name)" />
+      <button id="addBtn">新增</button>
+    </div>
+  </section>
+
+  <section>
+    <div class="btn-row">
+      <button class="btn btn-secondary" id="optionsBtn">設定</button>
+      <button class="btn btn-danger" id="clearBtn">清除記錄</button>
+    </div>
+  </section>
+
+  <a class="options-link" id="optionsLink" href="#">進階設定 →</a>
+
+  <script src="popup.js"></script>
+</body>
+</html>
