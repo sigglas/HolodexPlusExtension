@@ -26,12 +26,13 @@ async function handleStreams(streams) {
   if (!Array.isArray(streams) || streams.length === 0) return;
 
   const data = await chrome.storage.local.get([
-    'watchedChannels', 'openedStreams',
+    'watchedChannels', 'watchedTopics', 'openedStreams',
     'preStartMin', 'reopenMin', 'activeTab', 'notificationsEnabled',
   ]);
 
   const watchedChannels = data.watchedChannels ?? [];
-  if (watchedChannels.length === 0) return;
+  const watchedTopics    = data.watchedTopics    ?? [];
+  if (watchedChannels.length === 0 && watchedTopics.length === 0) return;
 
   const openedStreams = data.openedStreams        ?? {};
   const preStartMs   = (data.preStartMin  ?? 3)  * 60 * 1000;
@@ -43,7 +44,7 @@ async function handleStreams(streams) {
   let dirty = false;
 
   for (const stream of streams) {
-    if (!isWatchedChannel(stream.channel, watchedChannels)) continue;
+    if (!isWatchedStream(stream, watchedChannels, watchedTopics)) continue;
 
     const streamId   = stream.id;
     const watchUrl   = `https://holodex.net/watch/${streamId}`;
@@ -118,15 +119,24 @@ function evaluateShouldOpen(streamId, now, startScheduled, startActual, openedSt
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-function isWatchedChannel(channel, watchedChannels) {
-  if (!channel) return false;
-  const name    = (channel.name         || '').toLowerCase();
-  const engName = (channel.english_name || '').toLowerCase();
-  const id      = (channel.id           || '').toLowerCase();
-  return watchedChannels.some((w) => {
-    const wl = w.toLowerCase();
-    return name === wl || engName === wl || id === wl;
-  });
+function isWatchedStream(stream, watchedChannels, watchedTopics) {
+  // Match by channel name / english_name / id
+  if (watchedChannels.length > 0) {
+    const ch      = stream.channel;
+    const name    = (ch?.name         || '').toLowerCase();
+    const engName = (ch?.english_name || '').toLowerCase();
+    const chId    = (ch?.id           || '').toLowerCase();
+    if (watchedChannels.some((w) => {
+      const wl = w.toLowerCase();
+      return name === wl || engName === wl || chId === wl;
+    })) return true;
+  }
+  // Match by topic_id
+  if (watchedTopics.length > 0) {
+    const topicId = (stream.topic_id || '').toLowerCase();
+    if (topicId && watchedTopics.some((t) => t.toLowerCase() === topicId)) return true;
+  }
+  return false;
 }
 
 function displayName(channel) {

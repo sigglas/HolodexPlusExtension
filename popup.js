@@ -4,6 +4,10 @@ const channelListEl = document.getElementById('channelList');
 const emptyHint     = document.getElementById('emptyHint');
 const newChannelEl  = document.getElementById('newChannel');
 const addBtn        = document.getElementById('addBtn');
+const topicListEl   = document.getElementById('topicList');
+const topicEmptyHint= document.getElementById('topicEmptyHint');
+const newTopicEl    = document.getElementById('newTopic');
+const addTopicBtn   = document.getElementById('addTopicBtn');
 const optionsBtn    = document.getElementById('optionsBtn');
 const clearBtn      = document.getElementById('clearBtn');
 const lastCheckEl   = document.getElementById('lastCheck');
@@ -23,8 +27,9 @@ chrome.storage.local.get('lastCheck', ({ lastCheck }) => {
 // ── Render ────────────────────────────────────────────────────────────────────
 
 async function loadAndRender() {
-  const { watchedChannels = [] } = await chrome.storage.local.get('watchedChannels');
+  const { watchedChannels = [], watchedTopics = [] } = await chrome.storage.local.get(['watchedChannels', 'watchedTopics']);
   renderList(watchedChannels);
+  renderTopicList(watchedTopics);
 }
 
 function renderList(channels) {
@@ -78,6 +83,46 @@ async function removeChannel(name) {
   const updated = watchedChannels.filter(ch => ch !== name);
   await chrome.storage.local.set({ watchedChannels: updated });
   renderList(updated);
+}
+
+// ── Topic list ─────────────────────────────────────────────────────────────────
+
+function renderTopicList(topics) {
+  [...topicListEl.querySelectorAll('li:not(#topicEmptyHint)')].forEach(el => el.remove());
+  if (topics.length === 0) { topicEmptyHint.style.display = ''; return; }
+  topicEmptyHint.style.display = 'none';
+  topics.forEach((t) => {
+    const li  = document.createElement('li');
+    li.textContent = t;
+    const btn = document.createElement('button');
+    btn.className   = 'remove-btn';
+    btn.textContent = '✕';
+    btn.title       = '移除';
+    btn.addEventListener('click', () => removeTopic(t));
+    li.appendChild(btn);
+    topicListEl.appendChild(li);
+  });
+}
+
+addTopicBtn.addEventListener('click', addTopic);
+newTopicEl.addEventListener('keydown', (e) => { if (e.key === 'Enter') addTopic(); });
+
+async function addTopic() {
+  const val = newTopicEl.value.trim();
+  if (!val) return;
+  const { watchedTopics = [] } = await chrome.storage.local.get('watchedTopics');
+  if (watchedTopics.includes(val)) { newTopicEl.value = ''; return; }
+  watchedTopics.push(val);
+  await chrome.storage.local.set({ watchedTopics });
+  newTopicEl.value = '';
+  renderTopicList(watchedTopics);
+}
+
+async function removeTopic(name) {
+  const { watchedTopics = [] } = await chrome.storage.local.get('watchedTopics');
+  const updated = watchedTopics.filter(t => t !== name);
+  await chrome.storage.local.set({ watchedTopics: updated });
+  renderTopicList(updated);
 }
 
 // ── Buttons ───────────────────────────────────────────────────────────────────

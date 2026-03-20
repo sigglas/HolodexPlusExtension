@@ -3,6 +3,9 @@
 const channelTagsEl      = document.getElementById('channelTags');
 const newChannelEl       = document.getElementById('newChannel');
 const addChannelBtn      = document.getElementById('addChannelBtn');
+const topicTagsEl        = document.getElementById('topicTags');
+const newTopicEl         = document.getElementById('newTopic');
+const addTopicBtn        = document.getElementById('addTopicBtn');
 const preStartMinEl      = document.getElementById('preStartMin');
 const reopenMinEl        = document.getElementById('reopenMin');
 const autoplayEnabledEl  = document.getElementById('autoplayEnabled');
@@ -12,16 +15,18 @@ const saveBtn            = document.getElementById('saveBtn');
 const saveStatusEl       = document.getElementById('saveStatus');
 
 let channels = [];
+let topics   = [];
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 
 (async () => {
   const data = await chrome.storage.local.get([
-    'watchedChannels', 'preStartMin', 'reopenMin',
+    'watchedChannels', 'watchedTopics', 'preStartMin', 'reopenMin',
     'autoplayEnabled', 'activeTab', 'notificationsEnabled',
   ]);
 
   channels = data.watchedChannels ?? [];
+  topics   = data.watchedTopics   ?? [];
   preStartMinEl.value       = data.preStartMin           ?? 3;
   reopenMinEl.value         = data.reopenMin             ?? 10;
   autoplayEnabledEl.checked = data.autoplayEnabled       ?? true;
@@ -29,6 +34,7 @@ let channels = [];
   notificationsEl.checked   = data.notificationsEnabled  ?? true;
 
   renderTags();
+  renderTopicTags();
 })();
 
 // ── Channel tags ──────────────────────────────────────────────────────────────
@@ -70,6 +76,43 @@ function addChannel() {
   renderTags();
 }
 
+// ── Topic tags ────────────────────────────────────────────────────────────────
+
+function renderTopicTags() {
+  topicTagsEl.innerHTML = '';
+  if (topics.length === 0) {
+    topicTagsEl.innerHTML = '<span style="color:#6b7280;font-size:13px;">尚未新增標籤</span>';
+    return;
+  }
+  topics.forEach((t) => {
+    const tag = document.createElement('span');
+    tag.className = 'tag';
+    const name = document.createTextNode(t);
+    const btn  = document.createElement('button');
+    btn.className   = 'remove-tag';
+    btn.textContent = '✕';
+    btn.title       = '移除';
+    btn.addEventListener('click', () => {
+      topics = topics.filter(x => x !== t);
+      renderTopicTags();
+    });
+    tag.appendChild(name);
+    tag.appendChild(btn);
+    topicTagsEl.appendChild(tag);
+  });
+}
+
+addTopicBtn.addEventListener('click', addTopic);
+newTopicEl.addEventListener('keydown', (e) => { if (e.key === 'Enter') addTopic(); });
+
+function addTopic() {
+  const val = newTopicEl.value.trim();
+  if (!val || topics.includes(val)) { newTopicEl.value = ''; return; }
+  topics.push(val);
+  newTopicEl.value = '';
+  renderTopicTags();
+}
+
 // ── Save ──────────────────────────────────────────────────────────────────────
 
 saveBtn.addEventListener('click', async () => {
@@ -78,6 +121,7 @@ saveBtn.addEventListener('click', async () => {
 
   await chrome.storage.local.set({
     watchedChannels:      channels,
+    watchedTopics:        topics,
     preStartMin,
     reopenMin,
     autoplayEnabled:      autoplayEnabledEl.checked,
