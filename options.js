@@ -11,7 +11,6 @@ const newKeywordEl       = document.getElementById('newKeyword');
 const addKeywordBtn      = document.getElementById('addKeywordBtn');
 const preStartMinEl      = document.getElementById('preStartMin');
 const reopenMinEl        = document.getElementById('reopenMin');
-const checkMentionsEl    = document.getElementById('checkMentions');
 const autoplayEnabledEl  = document.getElementById('autoplayEnabled');
 const activeTabEl        = document.getElementById('activeTab');
 const notificationsEl    = document.getElementById('notificationsEnabled');
@@ -26,14 +25,14 @@ let keywords = [];
 
 (async () => {
   const data = await chrome.storage.local.get([
-    'watchedChannels', 'watchedTopics', 'watchedKeywords', 'checkMentions', 'preStartMin', 'reopenMin',
+    'watchedChannels', 'watchedTopics', 'watchedKeywords', 'preStartMin', 'reopenMin',
     'autoplayEnabled', 'activeTab', 'notificationsEnabled',
   ]);
 
-  channels = data.watchedChannels  ?? [];
+  channels = (data.watchedChannels ?? []).map(ch =>
+    typeof ch === 'string' ? { name: ch, checkMentions: false } : ch);
   topics   = data.watchedTopics    ?? [];
   keywords = data.watchedKeywords  ?? [];
-  checkMentionsEl.checked = data.checkMentions ?? false;
   preStartMinEl.value       = data.preStartMin           ?? 3;
   reopenMinEl.value         = data.reopenMin             ?? 10;
   autoplayEnabledEl.checked = data.autoplayEnabled       ?? true;
@@ -45,6 +44,11 @@ let keywords = [];
   renderKeywordTags();
 })();
 
+// Close any open per-channel dropdown when clicking outside
+document.addEventListener('click', () => {
+  document.querySelectorAll('.tag-dropdown.open').forEach(d => d.classList.remove('open'));
+});
+
 // ── Channel tags ──────────────────────────────────────────────────────────────
 
 function renderTags() {
@@ -53,23 +57,53 @@ function renderTags() {
     channelTagsEl.innerHTML = '<span style="color:#6b7280;font-size:13px;">尚未新增頻道</span>';
     return;
   }
-  channels.forEach((ch) => {
+  channels.forEach((entry) => {
+    const wrap = document.createElement('div');
+    wrap.className = 'tag-wrap';
+
     const tag = document.createElement('span');
     tag.className = 'tag';
+    tag.appendChild(document.createTextNode(entry.name));
 
-    const name = document.createTextNode(ch);
-    const btn  = document.createElement('button');
-    btn.className   = 'remove-tag';
-    btn.textContent = '✕';
-    btn.title       = '移除';
-    btn.addEventListener('click', () => {
-      channels = channels.filter(c => c !== ch);
+    // Gear button
+    const gearBtn = document.createElement('button');
+    gearBtn.className   = 'tag-opts-btn';
+    gearBtn.textContent = '⚙';
+    gearBtn.title       = '選項';
+
+    // Dropdown panel
+    const dropdown = document.createElement('div');
+    dropdown.className = 'tag-dropdown';
+
+    const mentionsLabel = document.createElement('label');
+    const mentionsCheck = document.createElement('input');
+    mentionsCheck.type    = 'checkbox';
+    mentionsCheck.checked = entry.checkMentions ?? false;
+    mentionsCheck.addEventListener('change', () => { entry.checkMentions = mentionsCheck.checked; });
+    mentionsLabel.appendChild(mentionsCheck);
+    mentionsLabel.appendChild(document.createTextNode(' 偵測 mentions（被提及時也開啟）'));
+    dropdown.appendChild(mentionsLabel);
+
+    gearBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      document.querySelectorAll('.tag-dropdown.open').forEach(d => { if (d !== dropdown) d.classList.remove('open'); });
+      dropdown.classList.toggle('open');
+    });
+
+    const removeBtn = document.createElement('button');
+    removeBtn.className   = 'remove-tag';
+    removeBtn.textContent = '✕';
+    removeBtn.title       = '移除';
+    removeBtn.addEventListener('click', () => {
+      channels = channels.filter(c => c !== entry);
       renderTags();
     });
 
-    tag.appendChild(name);
-    tag.appendChild(btn);
-    channelTagsEl.appendChild(tag);
+    tag.appendChild(gearBtn);
+    tag.appendChild(removeBtn);
+    wrap.appendChild(tag);
+    wrap.appendChild(dropdown);
+    channelTagsEl.appendChild(wrap);
   });
 }
 
@@ -78,8 +112,8 @@ newChannelEl.addEventListener('keydown', (e) => { if (e.key === 'Enter') addChan
 
 function addChannel() {
   const val = newChannelEl.value.trim();
-  if (!val || channels.includes(val)) { newChannelEl.value = ''; return; }
-  channels.push(val);
+  if (!val || channels.some(c => c.name === val)) { newChannelEl.value = ''; return; }
+  channels.push({ name: val, checkMentions: false });
   newChannelEl.value = '';
   renderTags();
 }
@@ -168,7 +202,6 @@ saveBtn.addEventListener('click', async () => {
     watchedChannels:      channels,
     watchedTopics:        topics,
     watchedKeywords:      keywords,
-    checkMentions:        checkMentionsEl.checked,
     preStartMin,
     reopenMin,
     autoplayEnabled:      autoplayEnabledEl.checked,

@@ -208,6 +208,57 @@
       color: #34d399;
       min-height: 20px;
     }
+
+    /* Per-channel option dropdown */
+    .tag-wrap { position: relative; display: inline-block; }
+
+    .tag-opts-btn {
+      background: none;
+      border: none;
+      color: #9ca3af;
+      cursor: pointer;
+      font-size: 11px;
+      padding: 0 3px;
+      line-height: 1;
+    }
+
+    .tag-opts-btn:hover { color: #a78bfa; }
+
+    .tag-dropdown {
+      display: none;
+      position: absolute;
+      top: calc(100% + 6px);
+      left: 0;
+      z-index: 20;
+      background: #1a1a2e;
+      border: 1px solid #4c1d95;
+      border-radius: 8px;
+      padding: 10px 14px;
+      min-width: 180px;
+      flex-direction: column;
+      gap: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,.4);
+    }
+
+    .tag-dropdown.open { display: flex; }
+
+    .tag-dropdown label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      color: #d1d5db;
+      cursor: pointer;
+      white-space: nowrap;
+      margin: 0;
+    }
+
+    .tag-dropdown label input[type="checkbox"] {
+      width: 14px;
+      height: 14px;
+      margin-top: 0;
+      accent-color: #a78bfa;
+    }
   </style>
 </head>
 <body>
@@ -222,14 +273,7 @@
       <input type="text" id="newChannel" placeholder="頻道名稱（channel.name 或 channel.english_name）" />
       <button class="btn" id="addChannelBtn">新增</button>
     </div>
-    <p class="hint-text">輸入頻道名稱，例如：<code>Koseki Bijou</code> 或 <code>Koseki Bijou Ch. hololive-EN</code></p>
-    <label style="margin-top:12px;">
-      <input type="checkbox" id="checkMentions" />
-      <span class="label-text">
-        同時偵測 <code>mentions</code>（其他直播中被提及的頻道）
-        <span class="hint">若某場直播的 mentions 陣列中包含監控頻道，也會自動開啟</span>
-      </span>
-    </label>
+    <p class="hint-text">輸入頻道名稱，例如：<code>Koseki Bijou</code> 或 <code>Koseki Bijou Ch. hololive-EN</code>。每個頻道可點擊 ⚙ 設定個別選項。</p>
   </div>
 
   <!-- Watched Topics -->

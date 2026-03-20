@@ -4,7 +4,6 @@ const channelListEl = document.getElementById('channelList');
 const emptyHint     = document.getElementById('emptyHint');
 const newChannelEl  = document.getElementById('newChannel');
 const addBtn           = document.getElementById('addBtn');
-const checkMentionsEl  = document.getElementById('checkMentions');
 const topicListEl      = document.getElementById('topicList');
 const topicEmptyHint   = document.getElementById('topicEmptyHint');
 const newTopicEl       = document.getElementById('newTopic');
@@ -22,6 +21,11 @@ const optionsLink   = document.getElementById('optionsLink');
 
 loadAndRender();
 
+// Close channel dropdowns when clicking outside
+document.addEventListener('click', () => {
+  document.querySelectorAll('.ch-dropdown.open').forEach(d => d.classList.remove('open'));
+});
+
 // Refresh last-check time
 chrome.storage.local.get('lastCheck', ({ lastCheck }) => {
   if (lastCheck) {
@@ -32,39 +36,76 @@ chrome.storage.local.get('lastCheck', ({ lastCheck }) => {
 // ── Render ────────────────────────────────────────────────────────────────────
 
 async function loadAndRender() {
-  const { watchedChannels = [], watchedTopics = [], watchedKeywords = [], checkMentions = false } =
-    await chrome.storage.local.get(['watchedChannels', 'watchedTopics', 'watchedKeywords', 'checkMentions']);
-  renderList(watchedChannels);
+  const { watchedChannels = [], watchedTopics = [], watchedKeywords = [] } =
+    await chrome.storage.local.get(['watchedChannels', 'watchedTopics', 'watchedKeywords']);
+  const norm = watchedChannels.map(c => typeof c === 'string' ? { name: c, checkMentions: false } : c);
+  renderList(norm);
   renderTopicList(watchedTopics);
   renderKeywordList(watchedKeywords);
-  checkMentionsEl.checked = checkMentions;
 }
 
-checkMentionsEl.addEventListener('change', () => {
-  chrome.storage.local.set({ checkMentions: checkMentionsEl.checked });
-});
-
 function renderList(channels) {
-  // Remove all items except the empty-hint template
   [...channelListEl.querySelectorAll('li:not(#emptyHint)')].forEach(el => el.remove());
-
-  if (channels.length === 0) {
-    emptyHint.style.display = '';
-    return;
-  }
-
+  if (channels.length === 0) { emptyHint.style.display = ''; return; }
   emptyHint.style.display = 'none';
-  channels.forEach((ch) => {
+
+  channels.forEach((entry) => {
     const li = document.createElement('li');
-    li.textContent = ch;
 
-    const btn = document.createElement('button');
-    btn.className = 'remove-btn';
-    btn.textContent = '✕';
-    btn.title = '移除';
-    btn.addEventListener('click', () => removeChannel(ch));
+    const nameSpan = document.createElement('span');
+    nameSpan.className   = 'ch-name';
+    nameSpan.textContent = entry.name;
 
-    li.appendChild(btn);
+    // Right-side controls
+    const controls = document.createElement('div');
+    controls.className = 'ch-controls';
+
+    const optsWrap = document.createElement('div');
+    optsWrap.className = 'ch-opts-wrap';
+
+    const optsBtn = document.createElement('button');
+    optsBtn.className   = 'opts-btn';
+    optsBtn.textContent = '⚙';
+    optsBtn.title       = '選項';
+
+    const dropdown = document.createElement('div');
+    dropdown.className = 'ch-dropdown';
+
+    // Mentions checkbox
+    const mentionsLabel = document.createElement('label');
+    const mentionsCheck = document.createElement('input');
+    mentionsCheck.type    = 'checkbox';
+    mentionsCheck.checked = entry.checkMentions ?? false;
+    mentionsCheck.addEventListener('change', async () => {
+      const { watchedChannels = [] } = await chrome.storage.local.get('watchedChannels');
+      const norm = watchedChannels.map(c => typeof c === 'string' ? { name: c, checkMentions: false } : c);
+      const found = norm.find(c => c.name === entry.name);
+      if (found) found.checkMentions = mentionsCheck.checked;
+      await chrome.storage.local.set({ watchedChannels: norm });
+    });
+    mentionsLabel.appendChild(mentionsCheck);
+    mentionsLabel.appendChild(document.createTextNode(' 偵測 mentions'));
+    dropdown.appendChild(mentionsLabel);
+
+    optsBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      document.querySelectorAll('.ch-dropdown.open').forEach(d => { if (d !== dropdown) d.classList.remove('open'); });
+      dropdown.classList.toggle('open');
+    });
+
+    optsWrap.appendChild(optsBtn);
+    optsWrap.appendChild(dropdown);
+
+    const removeBtn = document.createElement('button');
+    removeBtn.className   = 'remove-btn';
+    removeBtn.textContent = '✕';
+    removeBtn.title       = '移除';
+    removeBtn.addEventListener('click', () => removeChannel(entry.name));
+
+    controls.appendChild(optsWrap);
+    controls.appendChild(removeBtn);
+    li.appendChild(nameSpan);
+    li.appendChild(controls);
     channelListEl.appendChild(li);
   });
 }
@@ -79,20 +120,20 @@ async function addChannel() {
   if (!val) return;
 
   const { watchedChannels = [] } = await chrome.storage.local.get('watchedChannels');
-  if (watchedChannels.includes(val)) {
-    newChannelEl.value = '';
-    return;
-  }
+  const norm = watchedChannels.map(c => typeof c === 'string' ? { name: c, checkMentions: false } : c);
+  if (norm.some(c => c.name === val)) { newChannelEl.value = ''; return; }
 
-  watchedChannels.push(val);
-  await chrome.storage.local.set({ watchedChannels });
+  norm.push({ name: val, checkMentions: false });
+  await chrome.storage.local.set({ watchedChannels: norm });
   newChannelEl.value = '';
-  renderList(watchedChannels);
+  renderList(norm);
 }
 
 async function removeChannel(name) {
   const { watchedChannels = [] } = await chrome.storage.local.get('watchedChannels');
-  const updated = watchedChannels.filter(ch => ch !== name);
+  const updated = watchedChannels
+    .map(c => typeof c === 'string' ? { name: c, checkMentions: false } : c)
+    .filter(c => c.name !== name);
   await chrome.storage.local.set({ watchedChannels: updated });
   renderList(updated);
 }

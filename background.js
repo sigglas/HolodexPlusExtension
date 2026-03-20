@@ -26,14 +26,15 @@ async function handleStreams(streams) {
   if (!Array.isArray(streams) || streams.length === 0) return;
 
   const data = await chrome.storage.local.get([
-    'watchedChannels', 'watchedTopics', 'watchedKeywords', 'checkMentions', 'openedStreams',
+    'watchedChannels', 'watchedTopics', 'watchedKeywords', 'openedStreams',
     'preStartMin', 'reopenMin', 'activeTab', 'notificationsEnabled',
   ]);
 
-  const watchedChannels = data.watchedChannels  ?? [];
+  // Normalize: migrate legacy string[] format to object[]
+  const watchedChannels = (data.watchedChannels ?? []).map(ch =>
+    typeof ch === 'string' ? { name: ch, checkMentions: false } : ch);
   const watchedTopics    = data.watchedTopics    ?? [];
   const watchedKeywords  = data.watchedKeywords  ?? [];
-  const checkMentions    = data.checkMentions    ?? false;
   if (watchedChannels.length === 0 && watchedTopics.length === 0 && watchedKeywords.length === 0) return;
 
   const openedStreams = data.openedStreams        ?? {};
@@ -46,7 +47,7 @@ async function handleStreams(streams) {
   let dirty = false;
 
   for (const stream of streams) {
-    if (!isWatchedStream(stream, watchedChannels, watchedTopics, watchedKeywords, checkMentions)) continue;
+    if (!isWatchedStream(stream, watchedChannels, watchedTopics, watchedKeywords)) continue;
 
     const streamId   = stream.id;
     const watchUrl   = `https://holodex.net/watch/${streamId}`;
@@ -121,26 +122,28 @@ function evaluateShouldOpen(streamId, now, startScheduled, startActual, openedSt
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-function isWatchedStream(stream, watchedChannels, watchedTopics, watchedKeywords, checkMentions) {
-  // Match by channel name / english_name / id
+function isWatchedStream(stream, watchedChannels, watchedTopics, watchedKeywords) {
+  // Match by channel name / english_name / id (each entry is {name, checkMentions})
   if (watchedChannels.length > 0) {
     const ch      = stream.channel;
     const name    = (ch?.name         || '').toLowerCase();
     const engName = (ch?.english_name || '').toLowerCase();
     const chId    = (ch?.id           || '').toLowerCase();
-    if (watchedChannels.some((w) => {
-      const wl = w.toLowerCase();
+    const matchedEntry = watchedChannels.find((entry) => {
+      const wl = entry.name.toLowerCase();
       return name === wl || engName === wl || chId === wl;
-    })) return true;
+    });
+    if (matchedEntry) return true;
 
-    // Match by mentions array (if enabled)
-    if (checkMentions && Array.isArray(stream.mentions)) {
-      if (stream.mentions.some((m) => {
+    // Match by mentions array — only for channels with checkMentions enabled
+    if (Array.isArray(stream.mentions)) {
+      const mentionEnabled = watchedChannels.filter(e => e.checkMentions);
+      if (mentionEnabled.length > 0 && stream.mentions.some((m) => {
         const mn  = (m?.name         || '').toLowerCase();
         const men = (m?.english_name || '').toLowerCase();
         const mid = (m?.id           || '').toLowerCase();
-        return watchedChannels.some((w) => {
-          const wl = w.toLowerCase();
+        return mentionEnabled.some((entry) => {
+          const wl = entry.name.toLowerCase();
           return mn === wl || men === wl || mid === wl;
         });
       })) return true;
