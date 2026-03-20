@@ -3,7 +3,8 @@
 const channelListEl = document.getElementById('channelList');
 const emptyHint     = document.getElementById('emptyHint');
 const newChannelEl  = document.getElementById('newChannel');
-const addBtn        = document.getElementById('addBtn');
+const addBtn           = document.getElementById('addBtn');
+const checkMentionsEl  = document.getElementById('checkMentions');
 const topicListEl      = document.getElementById('topicList');
 const topicEmptyHint   = document.getElementById('topicEmptyHint');
 const newTopicEl       = document.getElementById('newTopic');
@@ -31,12 +32,17 @@ chrome.storage.local.get('lastCheck', ({ lastCheck }) => {
 // ── Render ────────────────────────────────────────────────────────────────────
 
 async function loadAndRender() {
-  const { watchedChannels = [], watchedTopics = [], watchedKeywords = [] } =
-    await chrome.storage.local.get(['watchedChannels', 'watchedTopics', 'watchedKeywords']);
+  const { watchedChannels = [], watchedTopics = [], watchedKeywords = [], checkMentions = false } =
+    await chrome.storage.local.get(['watchedChannels', 'watchedTopics', 'watchedKeywords', 'checkMentions']);
   renderList(watchedChannels);
   renderTopicList(watchedTopics);
   renderKeywordList(watchedKeywords);
+  checkMentionsEl.checked = checkMentions;
 }
+
+checkMentionsEl.addEventListener('change', () => {
+  chrome.storage.local.set({ checkMentions: checkMentionsEl.checked });
+});
 
 function renderList(channels) {
   // Remove all items except the empty-hint template

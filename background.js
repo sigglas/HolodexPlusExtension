@@ -26,13 +26,14 @@ async function handleStreams(streams) {
   if (!Array.isArray(streams) || streams.length === 0) return;
 
   const data = await chrome.storage.local.get([
-    'watchedChannels', 'watchedTopics', 'watchedKeywords', 'openedStreams',
+    'watchedChannels', 'watchedTopics', 'watchedKeywords', 'checkMentions', 'openedStreams',
     'preStartMin', 'reopenMin', 'activeTab', 'notificationsEnabled',
   ]);
 
   const watchedChannels = data.watchedChannels  ?? [];
   const watchedTopics    = data.watchedTopics    ?? [];
   const watchedKeywords  = data.watchedKeywords  ?? [];
+  const checkMentions    = data.checkMentions    ?? false;
   if (watchedChannels.length === 0 && watchedTopics.length === 0 && watchedKeywords.length === 0) return;
 
   const openedStreams = data.openedStreams        ?? {};
@@ -45,7 +46,7 @@ async function handleStreams(streams) {
   let dirty = false;
 
   for (const stream of streams) {
-    if (!isWatchedStream(stream, watchedChannels, watchedTopics, watchedKeywords)) continue;
+    if (!isWatchedStream(stream, watchedChannels, watchedTopics, watchedKeywords, checkMentions)) continue;
 
     const streamId   = stream.id;
     const watchUrl   = `https://holodex.net/watch/${streamId}`;
@@ -120,7 +121,7 @@ function evaluateShouldOpen(streamId, now, startScheduled, startActual, openedSt
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-function isWatchedStream(stream, watchedChannels, watchedTopics, watchedKeywords) {
+function isWatchedStream(stream, watchedChannels, watchedTopics, watchedKeywords, checkMentions) {
   // Match by channel name / english_name / id
   if (watchedChannels.length > 0) {
     const ch      = stream.channel;
@@ -131,6 +132,19 @@ function isWatchedStream(stream, watchedChannels, watchedTopics, watchedKeywords
       const wl = w.toLowerCase();
       return name === wl || engName === wl || chId === wl;
     })) return true;
+
+    // Match by mentions array (if enabled)
+    if (checkMentions && Array.isArray(stream.mentions)) {
+      if (stream.mentions.some((m) => {
+        const mn  = (m?.name         || '').toLowerCase();
+        const men = (m?.english_name || '').toLowerCase();
+        const mid = (m?.id           || '').toLowerCase();
+        return watchedChannels.some((w) => {
+          const wl = w.toLowerCase();
+          return mn === wl || men === wl || mid === wl;
+        });
+      })) return true;
+    }
   }
   // Match by topic_id (exact)
   if (watchedTopics.length > 0) {

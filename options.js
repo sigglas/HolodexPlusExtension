@@ -11,6 +11,7 @@ const newKeywordEl       = document.getElementById('newKeyword');
 const addKeywordBtn      = document.getElementById('addKeywordBtn');
 const preStartMinEl      = document.getElementById('preStartMin');
 const reopenMinEl        = document.getElementById('reopenMin');
+const checkMentionsEl    = document.getElementById('checkMentions');
 const autoplayEnabledEl  = document.getElementById('autoplayEnabled');
 const activeTabEl        = document.getElementById('activeTab');
 const notificationsEl    = document.getElementById('notificationsEnabled');
@@ -25,13 +26,14 @@ let keywords = [];
 
 (async () => {
   const data = await chrome.storage.local.get([
-    'watchedChannels', 'watchedTopics', 'watchedKeywords', 'preStartMin', 'reopenMin',
+    'watchedChannels', 'watchedTopics', 'watchedKeywords', 'checkMentions', 'preStartMin', 'reopenMin',
     'autoplayEnabled', 'activeTab', 'notificationsEnabled',
   ]);
 
   channels = data.watchedChannels  ?? [];
   topics   = data.watchedTopics    ?? [];
   keywords = data.watchedKeywords  ?? [];
+  checkMentionsEl.checked = data.checkMentions ?? false;
   preStartMinEl.value       = data.preStartMin           ?? 3;
   reopenMinEl.value         = data.reopenMin             ?? 10;
   autoplayEnabledEl.checked = data.autoplayEnabled       ?? true;
@@ -166,6 +168,7 @@ saveBtn.addEventListener('click', async () => {
     watchedChannels:      channels,
     watchedTopics:        topics,
     watchedKeywords:      keywords,
+    checkMentions:        checkMentionsEl.checked,
     preStartMin,
     reopenMin,
     autoplayEnabled:      autoplayEnabledEl.checked,
