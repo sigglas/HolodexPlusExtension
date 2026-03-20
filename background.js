@@ -3,7 +3,9 @@
 // Also runs a per-minute alarm so time-based rules fire even when the Holodex
 // page hasn't issued a fresh API call, reusing the last cached response.
 
-const TICK_ALARM = 'holodexPlusTick';
+const TICK_ALARM            = 'holodexPlusTick';
+const OPENED_STREAM_TTL_MS  = 6  * 60 * 60 * 1000;  // 6 hours
+const LAST_STREAMS_TTL_MS   = 2  * 60 * 60 * 1000;  // 2 hours (stale guard)
 
 // ── Alarm setup ───────────────────────────────────────────────────────────────
 
@@ -16,18 +18,20 @@ chrome.alarms.onAlarm.addListener((alarm) => {
 });
 
 async function tickCheck() {
-  const { lastStreams } = await chrome.storage.local.get('lastStreams');
-  if (Array.isArray(lastStreams) && lastStreams.length > 0) {
-    await handleStreams(lastStreams);
-  }
+  const { lastStreams, lastStreamsAt } = await chrome.storage.local.get(['lastStreams', 'lastStreamsAt']);
+  if (!Array.isArray(lastStreams) || lastStreams.length === 0) return;
+  // Don't re-evaluate stale data — if the holodex page hasn't refreshed in 2 h
+  // the schedule is likely outdated and we'd risk acting on stale info.
+  if (lastStreamsAt && (Date.now() - lastStreamsAt) > LAST_STREAMS_TTL_MS) return;
+  await handleStreams(lastStreams);
 }
 
 // ── Message handler ───────────────────────────────────────────────────────────
 
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   if (msg.type === 'API_DATA') {
-    // Cache the latest streams so the alarm tick can reuse them
-    chrome.storage.local.set({ lastStreams: msg.streams });
+    // Cache the latest streams (with timestamp) so the alarm tick can reuse them
+    chrome.storage.local.set({ lastStreams: msg.streams, lastStreamsAt: Date.now() });
     handleStreams(msg.streams).catch(console.error);
     sendResponse({ ok: true });
     return;
@@ -58,7 +62,18 @@ async function handleStreams(streams) {
   const watchedKeywords  = data.watchedKeywords  ?? [];
   if (watchedChannels.length === 0 && watchedTopics.length === 0 && watchedKeywords.length === 0) return;
 
-  const openedStreams = data.openedStreams        ?? {};
+  const openedStreams = data.openedStreams ?? {};
+
+  // Purge entries older than OPENED_STREAM_TTL_MS to prevent unbounded growth
+  const purgeBefore = now - OPENED_STREAM_TTL_MS;
+  let purged = false;
+  for (const id of Object.keys(openedStreams)) {
+    if ((openedStreams[id].openedAt ?? 0) < purgeBefore) {
+      delete openedStreams[id];
+      purged = true;
+    }
+  }
+  if (purged) dirty = true;
   const preStartMs   = (data.preStartMin  ?? 3)  * 60 * 1000;
   const reopenMs     = (data.reopenMin    ?? 10) * 60 * 1000;
   const activeTab    = data.activeTab             ?? false;
