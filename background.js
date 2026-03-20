@@ -1,9 +1,9 @@
-// HolodexPlus — background.js (Service Worker)
+﻿// HolodexPlusExtension — background.js (Service Worker)
 // Receives intercepted API data from content.js and opens watch tabs as needed.
 // Also runs a per-minute alarm so time-based rules fire even when the Holodex
 // page hasn't issued a fresh API call, reusing the last cached response.
 
-const TICK_ALARM            = 'holodexPlusTick';
+const TICK_ALARM            = 'holodexPlusExtensionTick';
 const OPENED_STREAM_TTL_MS  = 6  * 60 * 60 * 1000;  // 6 hours
 const LAST_STREAMS_TTL_MS   = 2  * 60 * 60 * 1000;  // 2 hours (stale guard)
 
@@ -105,7 +105,7 @@ async function handleStreams(streams) {
 
     try {
       await chrome.tabs.create({ url: watchUrl, active: activeTab });
-      console.log('[HolodexPlus] Opened tab for:', streamId, stream.title);
+      console.log('[HolodexPlusExtension] Opened tab for:', streamId, stream.title);
       openedStreams[streamId] = { channelId, openedAt: now };
       dirty = true;
 
@@ -113,12 +113,12 @@ async function handleStreams(streams) {
         chrome.notifications.create(`stream_${streamId}`, {
           type:     'basic',
           iconUrl:  stream.channel?.photo || 'icons/icon128.png',
-          title:    'HolodexPlus — 直播開始',
+          title:    'HolodexPlusExtension — 直播開始',
           message:  `${displayName(stream.channel)} 的直播已自動開啟`,
         });
       }
     } catch (e) {
-      console.error('[HolodexPlus] Failed to open tab:', e);
+      console.error('[HolodexPlusExtension] Failed to open tab:', e);
     }
   }
 

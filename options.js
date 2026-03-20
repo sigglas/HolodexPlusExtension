@@ -1,4 +1,4 @@
-// HolodexPlus — Options page script
+﻿// HolodexPlusExtension — Options page script
 
 const channelTagsEl      = document.getElementById('channelTags');
 const newChannelEl       = document.getElementById('newChannel');

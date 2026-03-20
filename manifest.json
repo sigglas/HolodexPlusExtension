@@ -1,6 +1,6 @@
-{
+﻿{
   "manifest_version": 3,
-  "name": "HolodexPlus",
+  "name": "HolodexPlusExtension",
   "version": "1.0.0",
   "description": "自動偵測 Holodex 直播排程，在開播前自動開啟分頁並播放影片",
   "permissions": [

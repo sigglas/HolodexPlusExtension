@@ -1,11 +1,11 @@
-// HolodexPlus — interceptor.js
+﻿// HolodexPlusExtension — interceptor.js
 // Runs in the PAGE's JavaScript context (world: "MAIN") at document_start.
 // Wraps window.fetch and XMLHttpRequest to intercept Holodex API responses
 // and relay them to the extension via window.postMessage.
 
 (() => {
   const TARGET_PATH = '/api/v2/live';
-  const MSG_KEY     = '__holodexPlusData';
+  const MSG_KEY     = '__holodexPlusExtensionData';
 
   // ── Intercept fetch ────────────────────────────────────────────────────────
 

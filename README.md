@@ -1,4 +1,4 @@
-# HolodexPlus
+﻿# HolodexPlusExtension
 
 Edge / Chrome 瀏覽器擴充程式，自動監控 [Holodex](https://holodex.net/) 的直播排程，在開播前自動開啟分頁並嘗試自動播放。
 
@@ -66,7 +66,7 @@ Edge / Chrome 瀏覽器擴充程式，自動監控 [Holodex](https://holodex.net
 ## 檔案結構
 
 ```
-HolodexPlus/
+HolodexPlusExtension/
 ├── manifest.json        # 擴充程式設定（Manifest V3）
 ├── background.js        # Service Worker：攔截資料處理、計時器、開啟邏輯
 ├── interceptor.js       # MAIN world 注入：攔截頁面的 fetch / XHR

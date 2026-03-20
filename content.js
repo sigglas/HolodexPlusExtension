@@ -1,11 +1,11 @@
-// HolodexPlus — content.js
+﻿// HolodexPlusExtension — content.js
 // Runs in the ISOLATED world on all https://holodex.net/* pages.
 //
 // Responsibilities:
 //  1. Relay API data posted by interceptor.js (MAIN world) to the background worker.
 //  2. On /watch/* pages, attempt to auto-play the embedded YouTube player.
 
-const MSG_KEY = '__holodexPlusData';
+const MSG_KEY = '__holodexPlusExtensionData';
 
 // ── 1. Relay intercepted API responses to background ─────────────────────────
 
@@ -61,7 +61,7 @@ function waitForPlay() {
           const url = new URL(iframe.src);
           url.searchParams.set('autoplay', '1');
           iframe.src = url.toString();
-          console.log('[HolodexPlus] Set autoplay on YouTube iframe.');
+          console.log('[HolodexPlusExtension] Set autoplay on YouTube iframe.');
         } catch (_) {}
       }
       clearInterval(timer);
@@ -77,7 +77,7 @@ function waitForPlay() {
 
     if (playBtn) {
       playBtn.click();
-      console.log('[HolodexPlus] Clicked play button.');
+      console.log('[HolodexPlusExtension] Clicked play button.');
       clearInterval(timer);
     }
   }, INTERVAL_MS);

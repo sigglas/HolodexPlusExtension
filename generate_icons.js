@@ -1,4 +1,4 @@
-// HolodexPlus — generate placeholder SVG icons and save as PNG-like data URIs
+﻿// HolodexPlusExtension — generate placeholder SVG icons and save as PNG-like data URIs
 // Run this ONCE in a browser console or Node.js with canvas to produce real PNGs.
 // For quick sideloading, you can use any 16x16 / 48x48 / 128x128 PNG images renamed to:
 //   icons/icon16.png

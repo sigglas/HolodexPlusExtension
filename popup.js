@@ -1,4 +1,4 @@
-// HolodexPlus — Popup script
+﻿// HolodexPlusExtension — Popup script
 
 const channelListEl = document.getElementById('channelList');
 const emptyHint     = document.getElementById('emptyHint');
