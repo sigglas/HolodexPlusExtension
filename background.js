@@ -1,12 +1,33 @@
 // HolodexPlus — background.js (Service Worker)
 // Receives intercepted API data from content.js and opens watch tabs as needed.
-// No direct API calls are made — the extension piggybacks on requests the
-// holodex.net page already makes with the user's authenticated session.
+// Also runs a per-minute alarm so time-based rules fire even when the Holodex
+// page hasn't issued a fresh API call, reusing the last cached response.
+
+const TICK_ALARM = 'holodexPlusTick';
+
+// ── Alarm setup ───────────────────────────────────────────────────────────────
+
+chrome.runtime.onInstalled.addListener(() => {
+  chrome.alarms.create(TICK_ALARM, { periodInMinutes: 1 });
+});
+
+chrome.alarms.onAlarm.addListener((alarm) => {
+  if (alarm.name === TICK_ALARM) tickCheck();
+});
+
+async function tickCheck() {
+  const { lastStreams } = await chrome.storage.local.get('lastStreams');
+  if (Array.isArray(lastStreams) && lastStreams.length > 0) {
+    await handleStreams(lastStreams);
+  }
+}
 
 // ── Message handler ───────────────────────────────────────────────────────────
 
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   if (msg.type === 'API_DATA') {
+    // Cache the latest streams so the alarm tick can reuse them
+    chrome.storage.local.set({ lastStreams: msg.streams });
     handleStreams(msg.streams).catch(console.error);
     sendResponse({ ok: true });
     return;
