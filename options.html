@@ -235,7 +235,16 @@
     </div>
     <p class="hint-text">輸入 API 回傳的 <code>topic_id</code> 字段，符合該標籤的所有直播都會被自動開啟</p>
   </div>
-
+  <!-- Watched Keywords -->
+  <div class="section">
+    <h2>監控標題關鍵字（title）</h2>
+    <div class="channel-tags" id="keywordTags"></div>
+    <div class="add-row">
+      <input type="text" id="newKeyword" placeholder="關鍵字，例如：Minecraft、歌回、#ad" />
+      <button class="btn" id="addKeywordBtn">新增</button>
+    </div>
+    <p class="hint-text">標題包含此關鍵字（不分大小寫）的所有直播都會被自動開啟</p>
+  </div>
   <!-- Timing -->
   <div class="section">
     <h2>時間設定</h2>

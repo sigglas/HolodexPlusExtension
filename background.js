@@ -26,13 +26,14 @@ async function handleStreams(streams) {
   if (!Array.isArray(streams) || streams.length === 0) return;
 
   const data = await chrome.storage.local.get([
-    'watchedChannels', 'watchedTopics', 'openedStreams',
+    'watchedChannels', 'watchedTopics', 'watchedKeywords', 'openedStreams',
     'preStartMin', 'reopenMin', 'activeTab', 'notificationsEnabled',
   ]);
 
-  const watchedChannels = data.watchedChannels ?? [];
+  const watchedChannels = data.watchedChannels  ?? [];
   const watchedTopics    = data.watchedTopics    ?? [];
-  if (watchedChannels.length === 0 && watchedTopics.length === 0) return;
+  const watchedKeywords  = data.watchedKeywords  ?? [];
+  if (watchedChannels.length === 0 && watchedTopics.length === 0 && watchedKeywords.length === 0) return;
 
   const openedStreams = data.openedStreams        ?? {};
   const preStartMs   = (data.preStartMin  ?? 3)  * 60 * 1000;
@@ -44,7 +45,7 @@ async function handleStreams(streams) {
   let dirty = false;
 
   for (const stream of streams) {
-    if (!isWatchedStream(stream, watchedChannels, watchedTopics)) continue;
+    if (!isWatchedStream(stream, watchedChannels, watchedTopics, watchedKeywords)) continue;
 
     const streamId   = stream.id;
     const watchUrl   = `https://holodex.net/watch/${streamId}`;
@@ -119,7 +120,7 @@ function evaluateShouldOpen(streamId, now, startScheduled, startActual, openedSt
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-function isWatchedStream(stream, watchedChannels, watchedTopics) {
+function isWatchedStream(stream, watchedChannels, watchedTopics, watchedKeywords) {
   // Match by channel name / english_name / id
   if (watchedChannels.length > 0) {
     const ch      = stream.channel;
@@ -131,10 +132,15 @@ function isWatchedStream(stream, watchedChannels, watchedTopics) {
       return name === wl || engName === wl || chId === wl;
     })) return true;
   }
-  // Match by topic_id
+  // Match by topic_id (exact)
   if (watchedTopics.length > 0) {
     const topicId = (stream.topic_id || '').toLowerCase();
     if (topicId && watchedTopics.some((t) => t.toLowerCase() === topicId)) return true;
+  }
+  // Match by title keyword (substring)
+  if (watchedKeywords.length > 0) {
+    const title = (stream.title || '').toLowerCase();
+    if (title && watchedKeywords.some((k) => title.includes(k.toLowerCase()))) return true;
   }
   return false;
 }

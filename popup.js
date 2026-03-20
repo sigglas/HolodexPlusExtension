@@ -4,10 +4,14 @@ const channelListEl = document.getElementById('channelList');
 const emptyHint     = document.getElementById('emptyHint');
 const newChannelEl  = document.getElementById('newChannel');
 const addBtn        = document.getElementById('addBtn');
-const topicListEl   = document.getElementById('topicList');
-const topicEmptyHint= document.getElementById('topicEmptyHint');
-const newTopicEl    = document.getElementById('newTopic');
-const addTopicBtn   = document.getElementById('addTopicBtn');
+const topicListEl      = document.getElementById('topicList');
+const topicEmptyHint   = document.getElementById('topicEmptyHint');
+const newTopicEl       = document.getElementById('newTopic');
+const addTopicBtn      = document.getElementById('addTopicBtn');
+const keywordListEl    = document.getElementById('keywordList');
+const keywordEmptyHint = document.getElementById('keywordEmptyHint');
+const newKeywordEl     = document.getElementById('newKeyword');
+const addKeywordBtn    = document.getElementById('addKeywordBtn');
 const optionsBtn    = document.getElementById('optionsBtn');
 const clearBtn      = document.getElementById('clearBtn');
 const lastCheckEl   = document.getElementById('lastCheck');
@@ -27,9 +31,11 @@ chrome.storage.local.get('lastCheck', ({ lastCheck }) => {
 // ── Render ────────────────────────────────────────────────────────────────────
 
 async function loadAndRender() {
-  const { watchedChannels = [], watchedTopics = [] } = await chrome.storage.local.get(['watchedChannels', 'watchedTopics']);
+  const { watchedChannels = [], watchedTopics = [], watchedKeywords = [] } =
+    await chrome.storage.local.get(['watchedChannels', 'watchedTopics', 'watchedKeywords']);
   renderList(watchedChannels);
   renderTopicList(watchedTopics);
+  renderKeywordList(watchedKeywords);
 }
 
 function renderList(channels) {
@@ -123,6 +129,46 @@ async function removeTopic(name) {
   const updated = watchedTopics.filter(t => t !== name);
   await chrome.storage.local.set({ watchedTopics: updated });
   renderTopicList(updated);
+}
+
+// ── Keyword list ──────────────────────────────────────────────────────────────
+
+function renderKeywordList(keywords) {
+  [...keywordListEl.querySelectorAll('li:not(#keywordEmptyHint)')].forEach(el => el.remove());
+  if (keywords.length === 0) { keywordEmptyHint.style.display = ''; return; }
+  keywordEmptyHint.style.display = 'none';
+  keywords.forEach((k) => {
+    const li  = document.createElement('li');
+    li.textContent = k;
+    const btn = document.createElement('button');
+    btn.className   = 'remove-btn';
+    btn.textContent = '✕';
+    btn.title       = '移除';
+    btn.addEventListener('click', () => removeKeyword(k));
+    li.appendChild(btn);
+    keywordListEl.appendChild(li);
+  });
+}
+
+addKeywordBtn.addEventListener('click', addKeyword);
+newKeywordEl.addEventListener('keydown', (e) => { if (e.key === 'Enter') addKeyword(); });
+
+async function addKeyword() {
+  const val = newKeywordEl.value.trim();
+  if (!val) return;
+  const { watchedKeywords = [] } = await chrome.storage.local.get('watchedKeywords');
+  if (watchedKeywords.includes(val)) { newKeywordEl.value = ''; return; }
+  watchedKeywords.push(val);
+  await chrome.storage.local.set({ watchedKeywords });
+  newKeywordEl.value = '';
+  renderKeywordList(watchedKeywords);
+}
+
+async function removeKeyword(name) {
+  const { watchedKeywords = [] } = await chrome.storage.local.get('watchedKeywords');
+  const updated = watchedKeywords.filter(k => k !== name);
+  await chrome.storage.local.set({ watchedKeywords: updated });
+  renderKeywordList(updated);
 }
 
 // ── Buttons ───────────────────────────────────────────────────────────────────
