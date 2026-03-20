@@ -63,24 +63,22 @@ async function handleStreams(streams) {
   if (watchedChannels.length === 0 && watchedTopics.length === 0 && watchedKeywords.length === 0) return;
 
   const openedStreams = data.openedStreams ?? {};
-
-  // Purge entries older than OPENED_STREAM_TTL_MS to prevent unbounded growth
-  const purgeBefore = now - OPENED_STREAM_TTL_MS;
-  let purged = false;
-  for (const id of Object.keys(openedStreams)) {
-    if ((openedStreams[id].openedAt ?? 0) < purgeBefore) {
-      delete openedStreams[id];
-      purged = true;
-    }
-  }
-  if (purged) dirty = true;
   const preStartMs   = (data.preStartMin  ?? 3)  * 60 * 1000;
   const reopenMs     = (data.reopenMin    ?? 10) * 60 * 1000;
   const activeTab    = data.activeTab             ?? false;
   const showNotif    = data.notificationsEnabled  ?? true;
 
-  const now = Date.now();
-  let dirty = false;
+  const now   = Date.now();
+  let   dirty = false;
+
+  // Purge entries older than OPENED_STREAM_TTL_MS to prevent unbounded growth
+  const purgeBefore = now - OPENED_STREAM_TTL_MS;
+  for (const id of Object.keys(openedStreams)) {
+    if ((openedStreams[id].openedAt ?? 0) < purgeBefore) {
+      delete openedStreams[id];
+      dirty = true;
+    }
+  }
 
   for (const stream of streams) {
     if (!isWatchedStream(stream, watchedChannels, watchedTopics, watchedKeywords)) continue;
