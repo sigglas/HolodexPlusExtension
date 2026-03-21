@@ -21,6 +21,9 @@ let channels = [];
 let topics   = [];
 let keywords = [];
 
+let allChannelSuggestions = [];
+let allTopicSuggestions   = [];
+
 // ── Init ──────────────────────────────────────────────────────────────────────
 
 (async () => {
@@ -42,6 +45,21 @@ let keywords = [];
   renderTags();
   renderTopicTags();
   renderKeywordTags();
+
+  await loadSuggestions();
+
+  setupAutocomplete(
+    newChannelEl, document.getElementById('channelAC'),
+    () => allChannelSuggestions.filter(n => !channels.some(c => c.name === n)),
+    val => { newChannelEl.value = val; addChannel(); },
+    () => addChannel()
+  );
+  setupAutocomplete(
+    newTopicEl, document.getElementById('topicAC'),
+    () => allTopicSuggestions.filter(t => !topics.includes(t)),
+    val => { newTopicEl.value = val; addTopic(); },
+    () => addTopic()
+  );
 })();
 
 // Close any open per-channel dropdown when clicking outside
@@ -108,7 +126,6 @@ function renderTags() {
 }
 
 addChannelBtn.addEventListener('click', addChannel);
-newChannelEl.addEventListener('keydown', (e) => { if (e.key === 'Enter') addChannel(); });
 
 function addChannel() {
   const val = newChannelEl.value.trim();
@@ -145,7 +162,6 @@ function renderTopicTags() {
 }
 
 addTopicBtn.addEventListener('click', addTopic);
-newTopicEl.addEventListener('keydown', (e) => { if (e.key === 'Enter') addTopic(); });
 
 function addTopic() {
   const val = newTopicEl.value.trim();
@@ -191,7 +207,73 @@ function addKeyword() {
   newKeywordEl.value = '';
   renderKeywordTags();
 }
+// ── Suggestions / Autocomplete ──────────────────────────────────────────────
 
+async function loadSuggestions() {
+  const { lastStreams } = await chrome.storage.local.get('lastStreams');
+  if (!Array.isArray(lastStreams)) return;
+  const chSet    = new Set();
+  const topicSet = new Set();
+  for (const s of lastStreams) {
+    if (s.channel?.name)         chSet.add(s.channel.name);
+    if (s.channel?.english_name) chSet.add(s.channel.english_name);
+    if (s.topic_id)              topicSet.add(s.topic_id);
+  }
+  allChannelSuggestions = [...chSet].sort();
+  allTopicSuggestions   = [...topicSet].sort();
+}
+
+function setupAutocomplete(inputEl, acListEl, getSuggestions, onPick, onEnterNoSel) {
+  let activeIdx = -1;
+  function getItems() { return [...acListEl.querySelectorAll('li')]; }
+
+  function render() {
+    const q        = inputEl.value.trim().toLowerCase();
+    const filtered = getSuggestions().filter(s => !q || s.toLowerCase().includes(q));
+    activeIdx = -1;
+    acListEl.innerHTML = '';
+    if (!filtered.length) { acListEl.classList.remove('open'); return; }
+    filtered.forEach(s => {
+      const li = document.createElement('li');
+      li.textContent = s;
+      li.addEventListener('mousedown', e => { e.preventDefault(); onPick(s); acListEl.classList.remove('open'); });
+      acListEl.appendChild(li);
+    });
+    acListEl.classList.add('open');
+  }
+
+  inputEl.addEventListener('input', render);
+  inputEl.addEventListener('focus', render);
+
+  inputEl.addEventListener('keydown', e => {
+    const lis = getItems();
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      activeIdx = Math.min(activeIdx + 1, lis.length - 1);
+      lis.forEach((li, i) => li.classList.toggle('active', i === activeIdx));
+      if (lis[activeIdx]) lis[activeIdx].scrollIntoView({ block: 'nearest' });
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      activeIdx = Math.max(activeIdx - 1, -1);
+      lis.forEach((li, i) => li.classList.toggle('active', i === activeIdx));
+    } else if (e.key === 'Escape') {
+      acListEl.classList.remove('open');
+      activeIdx = -1;
+    } else if (e.key === 'Enter') {
+      if (activeIdx >= 0 && lis[activeIdx]) {
+        e.preventDefault();
+        onPick(lis[activeIdx].textContent);
+        acListEl.classList.remove('open');
+      } else {
+        acListEl.classList.remove('open');
+        onEnterNoSel();
+      }
+    }
+  });
+
+  inputEl.addEventListener('blur', () =>
+    setTimeout(() => { acListEl.classList.remove('open'); activeIdx = -1; }, 150));
+}
 // ── Save ──────────────────────────────────────────────────────────────────────
 
 saveBtn.addEventListener('click', async () => {

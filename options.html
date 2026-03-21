@@ -259,6 +259,47 @@
       margin-top: 0;
       accent-color: #a78bfa;
     }
+
+    /* Autocomplete suggestions */
+    .ac-wrap { position: relative; width: 100%; }
+
+    .ac-dropdown {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      z-index: 30;
+      background: #1a1a2e;
+      border: 1px solid #4c1d95;
+      border-radius: 8px;
+      list-style: none;
+      margin: 3px 0 0;
+      padding: 4px 0;
+      max-height: 220px;
+      overflow-y: auto;
+      display: none;
+      min-width: 100%;
+      box-shadow: 0 6px 20px rgba(0,0,0,.5);
+      scrollbar-width: thin;
+      scrollbar-color: #4c1d95 transparent;
+    }
+
+    .ac-dropdown.open { display: block; }
+
+    .ac-dropdown li {
+      padding: 7px 14px;
+      font-size: 13px;
+      color: #d1d5db;
+      cursor: pointer;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .ac-dropdown li:hover,
+    .ac-dropdown li.active {
+      background: #2d1f5e;
+      color: #e8e8f0;
+    }
   </style>
 </head>
 <body>
@@ -269,9 +310,12 @@
   <div class="section">
     <h2>監控頻道清單</h2>
     <div class="channel-tags" id="channelTags"></div>
-    <div class="add-row">
-      <input type="text" id="newChannel" placeholder="頻道名稱（channel.name 或 channel.english_name）" />
-      <button class="btn" id="addChannelBtn">新增</button>
+    <div class="ac-wrap">
+      <div class="add-row">
+        <input type="text" id="newChannel" placeholder="頻道名稱（channel.name 或 channel.english_name）" autocomplete="off" />
+        <button class="btn" id="addChannelBtn">新增</button>
+      </div>
+      <ul class="ac-dropdown" id="channelAC"></ul>
     </div>
     <p class="hint-text">輸入頻道名稱，例如：<code>Koseki Bijou</code> 或 <code>Koseki Bijou Ch. hololive-EN</code>。每個頻道可點擊 ⚙ 設定個別選項。</p>
   </div>
@@ -280,9 +324,12 @@
   <div class="section">
     <h2>監控標籤（topic_id）</h2>
     <div class="channel-tags" id="topicTags"></div>
-    <div class="add-row">
-      <input type="text" id="newTopic" placeholder="topic_id，例如： Pokemon_Pokopia、minecraft、monhun" />
-      <button class="btn" id="addTopicBtn">新增</button>
+    <div class="ac-wrap">
+      <div class="add-row">
+        <input type="text" id="newTopic" placeholder="topic_id，例如： Pokemon_Pokopia、minecraft、monhun" autocomplete="off" />
+        <button class="btn" id="addTopicBtn">新增</button>
+      </div>
+      <ul class="ac-dropdown" id="topicAC"></ul>
     </div>
     <p class="hint-text">輸入 API 回傳的 <code>topic_id</code> 字段，符合該標籤的所有直播都會被自動開啟</p>
   </div>
