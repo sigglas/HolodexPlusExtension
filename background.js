@@ -52,7 +52,7 @@ async function handleStreams(streams) {
 
   const data = await chrome.storage.local.get([
     'watchedChannels', 'watchedTopics', 'watchedKeywords', 'openedStreams',
-    'preStartMin', 'reopenMin', 'activeTab', 'notificationsEnabled',
+    'preStartMin', 'reopenMin', 'activeTab', 'notificationsEnabled', 'topicKeywordOrg',
   ]);
 
   // Normalize: migrate legacy string[] format to object[]
@@ -65,8 +65,9 @@ async function handleStreams(streams) {
   const openedStreams = data.openedStreams ?? {};
   const preStartMs   = (data.preStartMin  ?? 3)  * 60 * 1000;
   const reopenMs     = (data.reopenMin    ?? 10) * 60 * 1000;
-  const activeTab    = data.activeTab             ?? false;
-  const showNotif    = data.notificationsEnabled  ?? true;
+  const activeTab       = data.activeTab             ?? false;
+  const showNotif       = data.notificationsEnabled  ?? true;
+  const topicKeywordOrg = data.topicKeywordOrg       ?? 'Hololive';
 
   const now   = Date.now();
   let   dirty = false;
@@ -81,7 +82,7 @@ async function handleStreams(streams) {
   }
 
   for (const stream of streams) {
-    if (!isWatchedStream(stream, watchedChannels, watchedTopics, watchedKeywords)) continue;
+    if (!isWatchedStream(stream, watchedChannels, watchedTopics, watchedKeywords, topicKeywordOrg)) continue;
 
     const streamId   = stream.id;
     const watchUrl   = `https://holodex.net/watch/${streamId}`;
@@ -156,7 +157,7 @@ function evaluateShouldOpen(streamId, now, startScheduled, startActual, openedSt
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-function isWatchedStream(stream, watchedChannels, watchedTopics, watchedKeywords) {
+function isWatchedStream(stream, watchedChannels, watchedTopics, watchedKeywords, topicKeywordOrg) {
   // Match by channel name / english_name / id (each entry is {name, checkMentions})
   if (watchedChannels.length > 0) {
     const ch      = stream.channel;
@@ -183,13 +184,18 @@ function isWatchedStream(stream, watchedChannels, watchedTopics, watchedKeywords
       })) return true;
     }
   }
+  // org restriction applies to topic_id and keyword matches (not channel-name matches)
+  const orgFilter = (topicKeywordOrg || '').trim().toLowerCase();
+  const streamOrg = (stream.channel?.org || '').toLowerCase();
+  const orgMatch  = !orgFilter || streamOrg === orgFilter;
+
   // Match by topic_id (exact)
-  if (watchedTopics.length > 0) {
+  if (orgMatch && watchedTopics.length > 0) {
     const topicId = (stream.topic_id || '').toLowerCase();
     if (topicId && watchedTopics.some((t) => t.toLowerCase() === topicId)) return true;
   }
   // Match by title keyword (substring)
-  if (watchedKeywords.length > 0) {
+  if (orgMatch && watchedKeywords.length > 0) {
     const title = (stream.title || '').toLowerCase();
     if (title && watchedKeywords.some((k) => title.includes(k.toLowerCase()))) return true;
   }

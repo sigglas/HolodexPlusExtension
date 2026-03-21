@@ -14,6 +14,7 @@ const reopenMinEl        = document.getElementById('reopenMin');
 const autoplayEnabledEl  = document.getElementById('autoplayEnabled');
 const activeTabEl        = document.getElementById('activeTab');
 const notificationsEl    = document.getElementById('notificationsEnabled');
+const topicKeywordOrgEl  = document.getElementById('topicKeywordOrg');
 const saveBtn            = document.getElementById('saveBtn');
 const saveStatusEl       = document.getElementById('saveStatus');
 
@@ -29,7 +30,7 @@ let allTopicSuggestions   = [];
 (async () => {
   const data = await chrome.storage.local.get([
     'watchedChannels', 'watchedTopics', 'watchedKeywords', 'preStartMin', 'reopenMin',
-    'autoplayEnabled', 'activeTab', 'notificationsEnabled',
+    'autoplayEnabled', 'activeTab', 'notificationsEnabled', 'topicKeywordOrg',
   ]);
 
   channels = (data.watchedChannels ?? []).map(ch =>
@@ -41,6 +42,7 @@ let allTopicSuggestions   = [];
   autoplayEnabledEl.checked = data.autoplayEnabled       ?? true;
   activeTabEl.checked       = data.activeTab             ?? false;
   notificationsEl.checked   = data.notificationsEnabled  ?? true;
+  topicKeywordOrgEl.value   = data.topicKeywordOrg       ?? 'Hololive';
 
   renderTags();
   renderTopicTags();
@@ -289,6 +291,7 @@ saveBtn.addEventListener('click', async () => {
     autoplayEnabled:      autoplayEnabledEl.checked,
     activeTab:            activeTabEl.checked,
     notificationsEnabled: notificationsEl.checked,
+    topicKeywordOrg:      topicKeywordOrgEl.value.trim(),
   });
 
   // Tell background to reload thresholds on next poll
