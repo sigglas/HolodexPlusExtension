@@ -52,15 +52,38 @@ chrome.tabs.onRemoved.addListener(async (tabId) => {
   const { openedStreams } = await chrome.storage.local.get('openedStreams');
   if (!openedStreams) return;
   let dirty = false;
+  let hitRec = null;
   for (const rec of Object.values(openedStreams)) {
     if (rec.tabId === tabId) {
       rec.closeCount = (rec.closeCount ?? 0) + 1;
       delete rec.tabId;
       dirty = true;
+      hitRec = rec;
       break;
     }
   }
   if (dirty) await chrome.storage.local.set({ openedStreams });
+
+  // When threshold reached, record channel as blacklist candidate (if not already watched)
+  if (hitRec && (hitRec.closeCount ?? 0) >= MAX_MANUAL_CLOSES && hitRec.channelId) {
+    const extra = await chrome.storage.local.get(['watchedChannels', 'closedChannels', 'blacklistedChannels']);
+    const normWatched = (extra.watchedChannels ?? []).map(ch =>
+      (typeof ch === 'string' ? ch : ch.name).toLowerCase());
+    const cName    = (hitRec.channelName        || '').toLowerCase();
+    const cEngName = (hitRec.channelEnglishName || '').toLowerCase();
+    const isWatched = normWatched.some(n =>
+      (cName && n === cName) || (cEngName && n === cEngName));
+    const blacklisted = extra.blacklistedChannels ?? [];
+    if (!isWatched && !blacklisted.some(b => b.id === hitRec.channelId)) {
+      const closed = extra.closedChannels ?? {};
+      closed[hitRec.channelId] = {
+        name:        hitRec.channelName        || '',
+        englishName: hitRec.channelEnglishName || '',
+        org:         hitRec.channelOrg         || '',
+      };
+      await chrome.storage.local.set({ closedChannels: closed });
+    }
+  }
 });
 
 // ── Core logic ────────────────────────────────────────────────────────────────
@@ -70,7 +93,7 @@ async function handleStreams(streams) {
 
   const data = await chrome.storage.local.get([
     'watchedChannels', 'watchedTopics', 'watchedKeywords', 'openedStreams',
-    'preStartMin', 'reopenMin', 'activeTab', 'notificationsEnabled', 'topicKeywordOrg',
+    'preStartMin', 'reopenMin', 'activeTab', 'notificationsEnabled', 'topicKeywordOrg', 'blacklistedChannels',
   ]);
 
   // Normalize: migrate legacy string[] format to object[]
@@ -83,9 +106,10 @@ async function handleStreams(streams) {
   const openedStreams = data.openedStreams ?? {};
   const preStartMs   = (data.preStartMin  ?? 3)  * 60 * 1000;
   const reopenMs     = (data.reopenMin    ?? 10) * 60 * 1000;
-  const activeTab       = data.activeTab             ?? false;
-  const showNotif       = data.notificationsEnabled  ?? true;
-  const topicKeywordOrg = data.topicKeywordOrg       ?? 'Hololive';
+  const activeTab           = data.activeTab             ?? false;
+  const showNotif           = data.notificationsEnabled  ?? true;
+  const topicKeywordOrg     = data.topicKeywordOrg       ?? 'Hololive';
+  const blacklistedChannels = data.blacklistedChannels   ?? [];
 
   const now   = Date.now();
   let   dirty = false;
@@ -100,7 +124,7 @@ async function handleStreams(streams) {
   }
 
   for (const stream of streams) {
-    if (!isWatchedStream(stream, watchedChannels, watchedTopics, watchedKeywords, topicKeywordOrg)) continue;
+    if (!isWatchedStream(stream, watchedChannels, watchedTopics, watchedKeywords, topicKeywordOrg, blacklistedChannels)) continue;
 
     const streamId   = stream.id;
     const watchUrl   = `https://holodex.net/watch/${streamId}`;
@@ -117,7 +141,11 @@ async function handleStreams(streams) {
 
     // Skip if a tab with this URL is already open (user may have opened it manually)
     if (await isTabOpen(watchUrl)) {
-      openedStreams[streamId] = { ...(openedStreams[streamId] ?? {}), channelId, openedAt: now };
+      openedStreams[streamId] = {
+        ...(openedStreams[streamId] ?? {}), channelId, openedAt: now,
+        channelName: stream.channel?.name || '', channelEnglishName: stream.channel?.english_name || '',
+        channelOrg:  stream.channel?.org  || '',
+      };
       dirty = true;
       continue;
     }
@@ -125,7 +153,11 @@ async function handleStreams(streams) {
     try {
       const newTab = await chrome.tabs.create({ url: watchUrl, active: activeTab });
       console.log('[HolodexPlusExtension] Opened tab for:', streamId, stream.title);
-      openedStreams[streamId] = { ...(openedStreams[streamId] ?? {}), channelId, openedAt: now, tabId: newTab.id };
+      openedStreams[streamId] = {
+        ...(openedStreams[streamId] ?? {}), channelId, openedAt: now, tabId: newTab.id,
+        channelName: stream.channel?.name || '', channelEnglishName: stream.channel?.english_name || '',
+        channelOrg:  stream.channel?.org  || '',
+      };
       dirty = true;
 
       if (showNotif) {
@@ -176,7 +208,7 @@ function evaluateShouldOpen(streamId, now, startScheduled, startActual, openedSt
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-function isWatchedStream(stream, watchedChannels, watchedTopics, watchedKeywords, topicKeywordOrg) {
+function isWatchedStream(stream, watchedChannels, watchedTopics, watchedKeywords, topicKeywordOrg, blacklistedChannels) {
   // Match by channel name / english_name / id (each entry is {name, checkMentions})
   if (watchedChannels.length > 0) {
     const ch      = stream.channel;
@@ -203,6 +235,10 @@ function isWatchedStream(stream, watchedChannels, watchedTopics, watchedKeywords
       })) return true;
     }
   }
+  // Blacklist blocks topic_id and keyword matches (direct channel-name watches above are unaffected)
+  const chId = stream.channel?.id || '';
+  if (blacklistedChannels.length > 0 && chId && blacklistedChannels.some(b => b.id === chId)) return false;
+
   // org restriction applies to topic_id and keyword matches (not channel-name matches)
   const orgFilter = (topicKeywordOrg || '').trim().toLowerCase();
   const streamOrg = (stream.channel?.org || '').toLowerCase();

@@ -14,9 +14,11 @@ const reopenMinEl        = document.getElementById('reopenMin');
 const autoplayEnabledEl  = document.getElementById('autoplayEnabled');
 const activeTabEl        = document.getElementById('activeTab');
 const notificationsEl    = document.getElementById('notificationsEnabled');
-const topicKeywordOrgEl  = document.getElementById('topicKeywordOrg');
-const saveBtn            = document.getElementById('saveBtn');
-const saveStatusEl       = document.getElementById('saveStatus');
+const topicKeywordOrgEl         = document.getElementById('topicKeywordOrg');
+const closedChannelsListEl      = document.getElementById('closedChannelsList');
+const blacklistedChannelsListEl = document.getElementById('blacklistedChannelsList');
+const saveBtn                   = document.getElementById('saveBtn');
+const saveStatusEl              = document.getElementById('saveStatus');
 
 let channels = [];
 let topics   = [];
@@ -25,12 +27,16 @@ let keywords = [];
 let allChannelSuggestions = [];
 let allTopicSuggestions   = [];
 
+let closedChannels      = {};  // { [channelId]: {name, englishName, org} }
+let blacklistedChannels = [];  // [{id, name, englishName, org}]
+
 // ── Init ──────────────────────────────────────────────────────────────────────
 
 (async () => {
   const data = await chrome.storage.local.get([
     'watchedChannels', 'watchedTopics', 'watchedKeywords', 'preStartMin', 'reopenMin',
     'autoplayEnabled', 'activeTab', 'notificationsEnabled', 'topicKeywordOrg',
+    'closedChannels', 'blacklistedChannels',
   ]);
 
   channels = (data.watchedChannels ?? []).map(ch =>
@@ -43,10 +49,14 @@ let allTopicSuggestions   = [];
   activeTabEl.checked       = data.activeTab             ?? false;
   notificationsEl.checked   = data.notificationsEnabled  ?? true;
   topicKeywordOrgEl.value   = data.topicKeywordOrg       ?? 'Hololive';
+  closedChannels      = data.closedChannels      ?? {};
+  blacklistedChannels = data.blacklistedChannels ?? [];
 
   renderTags();
   renderTopicTags();
   renderKeywordTags();
+  renderClosedChannels();
+  renderBlacklist();
 
   await loadSuggestions();
 
@@ -275,6 +285,71 @@ function setupAutocomplete(inputEl, acListEl, getSuggestions, onPick, onEnterNoS
 
   inputEl.addEventListener('blur', () =>
     setTimeout(() => { acListEl.classList.remove('open'); activeIdx = -1; }, 150));
+}
+// ── Closed channels / Blacklist ─────────────────────────────────────────────────────────────
+
+function renderClosedChannels() {
+  closedChannelsListEl.innerHTML = '';
+  const entries = Object.entries(closedChannels);
+  if (entries.length === 0) {
+    closedChannelsListEl.innerHTML = '<span style="color:#6b7280;font-size:13px;">尚無記錄</span>';
+    return;
+  }
+  entries.forEach(([chId, info]) => {
+    const row = document.createElement('div');
+    row.className = 'closed-ch-row';
+
+    const nameSpan = document.createElement('span');
+    nameSpan.className = 'closed-ch-name';
+    nameSpan.textContent = info.englishName || info.name || chId;
+    if (info.org) {
+      const orgSpan = document.createElement('span');
+      orgSpan.className = 'closed-ch-org';
+      orgSpan.textContent = `[${info.org}]`;
+      nameSpan.appendChild(orgSpan);
+    }
+
+    const btn = document.createElement('button');
+    btn.className   = 'btn-blacklist';
+    btn.textContent = '🚫 加入黑名單';
+    btn.addEventListener('click', async () => {
+      blacklistedChannels.push({ id: chId, ...info });
+      delete closedChannels[chId];
+      await chrome.storage.local.set({ closedChannels, blacklistedChannels });
+      renderClosedChannels();
+      renderBlacklist();
+    });
+
+    row.appendChild(nameSpan);
+    row.appendChild(btn);
+    closedChannelsListEl.appendChild(row);
+  });
+}
+
+function renderBlacklist() {
+  blacklistedChannelsListEl.innerHTML = '';
+  if (blacklistedChannels.length === 0) {
+    blacklistedChannelsListEl.innerHTML = '<span style="color:#6b7280;font-size:13px;">黑名單為空</span>';
+    return;
+  }
+  blacklistedChannels.forEach((entry) => {
+    const tag = document.createElement('span');
+    tag.className = 'tag';
+    tag.style.cssText = 'background:#3b0f0f;border-color:#7f1d1d;';
+    const name = document.createTextNode(entry.englishName || entry.name || entry.id);
+    const btn  = document.createElement('button');
+    btn.className   = 'remove-tag';
+    btn.textContent = '✕';
+    btn.title       = '從黑名單移除';
+    btn.addEventListener('click', async () => {
+      blacklistedChannels = blacklistedChannels.filter(b => b.id !== entry.id);
+      await chrome.storage.local.set({ blacklistedChannels });
+      renderBlacklist();
+    });
+    tag.appendChild(name);
+    tag.appendChild(btn);
+    blacklistedChannelsListEl.appendChild(tag);
+  });
 }
 // ── Save ──────────────────────────────────────────────────────────────────────
 

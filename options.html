@@ -314,6 +314,34 @@
       background: #2d1f5e;
       color: #e8e8f0;
     }
+
+    /* Closed channels / Blacklist */
+    .closed-ch-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 7px 0;
+      border-bottom: 1px solid #2d2d4e;
+      font-size: 13px;
+      color: #d1d5db;
+    }
+    .closed-ch-row:last-child { border-bottom: none; }
+    .closed-ch-name { flex: 1; }
+    .closed-ch-org { font-size: 11px; color: #6b7280; margin-left: 6px; }
+    .btn-blacklist {
+      background: #7f1d1d;
+      border: none;
+      border-radius: 6px;
+      color: #fca5a5;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 600;
+      padding: 4px 10px;
+      white-space: nowrap;
+      transition: background .15s;
+    }
+    .btn-blacklist:hover { background: #991b1b; }
   </style>
 </head>
 <body>
@@ -367,6 +395,16 @@
     </div>
     <p class="hint-text">標題包含此關鍵字（不分大小寫）的所有直播都會被自動開啟</p>
   </div>
+  <!-- Closed channels / Blacklist -->
+  <div class="section">
+    <h2>曾被連續手動關閉的頻道</h2>
+    <p class="hint-text" style="margin-bottom:10px;">分頁被手動連續關閉 ≥2 次的頻道記錄於此（已在監控清單內的不會出現）。點擊《🚫 加入黑名單》可使該頻道不再被 topic/關鍵字規則自動開啟。</p>
+    <div id="closedChannelsList"></div>
+    <h2 style="margin-top:18px;">黑名單頻道</h2>
+    <p class="hint-text" style="margin-bottom:10px;">以下頻道不會被 topic_id／標題關鍵字規則自動開啟（直接加入監控清單的頻道不受影響）。</p>
+    <div class="channel-tags" id="blacklistedChannelsList"></div>
+  </div>
+
   <!-- Timing -->
   <div class="section">
     <h2>時間設定</h2>
