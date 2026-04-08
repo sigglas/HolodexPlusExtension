@@ -6,6 +6,7 @@
 const TICK_ALARM            = 'holodexPlusExtensionTick';
 const OPENED_STREAM_TTL_MS  = 6  * 60 * 60 * 1000;  // 6 hours
 const LAST_STREAMS_TTL_MS   = 2  * 60 * 60 * 1000;  // 2 hours (stale guard)
+const MAX_MANUAL_CLOSES     = 2;                     // stop reopening after this many manual closes
 
 // ── Alarm setup ───────────────────────────────────────────────────────────────
 
@@ -43,6 +44,23 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   if (msg.type === 'SETTINGS_UPDATED') {
     sendResponse({ ok: true });
   }
+});
+
+// ── Tab close tracking ────────────────────────────────────────────────────────
+
+chrome.tabs.onRemoved.addListener(async (tabId) => {
+  const { openedStreams } = await chrome.storage.local.get('openedStreams');
+  if (!openedStreams) return;
+  let dirty = false;
+  for (const rec of Object.values(openedStreams)) {
+    if (rec.tabId === tabId) {
+      rec.closeCount = (rec.closeCount ?? 0) + 1;
+      delete rec.tabId;
+      dirty = true;
+      break;
+    }
+  }
+  if (dirty) await chrome.storage.local.set({ openedStreams });
 });
 
 // ── Core logic ────────────────────────────────────────────────────────────────
@@ -99,15 +117,15 @@ async function handleStreams(streams) {
 
     // Skip if a tab with this URL is already open (user may have opened it manually)
     if (await isTabOpen(watchUrl)) {
-      openedStreams[streamId] = { channelId, openedAt: now };
+      openedStreams[streamId] = { ...(openedStreams[streamId] ?? {}), channelId, openedAt: now };
       dirty = true;
       continue;
     }
 
     try {
-      await chrome.tabs.create({ url: watchUrl, active: activeTab });
+      const newTab = await chrome.tabs.create({ url: watchUrl, active: activeTab });
       console.log('[HolodexPlusExtension] Opened tab for:', streamId, stream.title);
-      openedStreams[streamId] = { channelId, openedAt: now };
+      openedStreams[streamId] = { ...(openedStreams[streamId] ?? {}), channelId, openedAt: now, tabId: newTab.id };
       dirty = true;
 
       if (showNotif) {
@@ -146,6 +164,7 @@ function evaluateShouldOpen(streamId, now, startScheduled, startActual, openedSt
   const record = openedStreams[streamId];
 
   if (record) {
+    if ((record.closeCount ?? 0) >= MAX_MANUAL_CLOSES) return false;
     if (!startActual) return false;
     return (now - startActual) < reopenMs;
   }
